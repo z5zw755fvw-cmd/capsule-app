@@ -12,13 +12,19 @@ jobs:
           distribution: 'temurin'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-      - name: Fix
+      - name: Auto Fix Folder Name
         run: |
-          ls -la
-          mv app app_backup || true
-          mv */app app || true
-          ls -la
-          ls -la app
+          python3 << 'PY'
+          import os, shutil, subprocess
+          for d in os.listdir('.'):
+            if os.path.isdir(d) and d!='app' and os.path.exists(os.path.join(d,'src')):
+              print(f"Found {d}, rename to app")
+              if os.path.exists('app'):
+                shutil.rmtree('app')
+              shutil.move(d,'app')
+              break
+          subprocess.run(["ls","-la"])
+          PY
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
         with:
