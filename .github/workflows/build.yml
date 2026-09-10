@@ -13,26 +13,35 @@ jobs:
 
       - name: Auto Fix Folder Name
         run: |
-          for d in *; do [ -d "$d/src" ] && [ "$d"!= "app" ] && rm -rf app && mv "$d" app && break; done
+          python3 << 'PY'
+          import os, shutil
+          for d in os.listdir('.'):
+            if os.path.isdir(d) and d!='app' and os.path.exists(os.path.join(d,'src')):
+              if os.path.exists('app'):
+                shutil.rmtree('app')
+              shutil.move(d,'app')
+              print(f"Renamed {d} -> app")
+              break
+          print("List:", os.listdir('.'))
+          PY
 
       - name: Patch gradle.properties - 修AndroidX
         run: |
           echo "android.useAndroidX=true" >> gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
           cat gradle.properties
-          # 防止写到 app 里也写一份
-          echo "android.useAndroidX=true" >> app/gradle.properties 2>/dev/null || true
-          echo "android.enableJetifier=true" >> app/gradle.properties 2>/dev/null || true
 
       - name: Patch build.gradle - 修namespace
         run: |
-          python3 -c "
+          python3 << 'PY'
+          import os
           p='app/build.gradle'
           s=open(p,encoding='utf-8',errors='ignore').read()
           if 'namespace' not in s:
-              s=s.replace('android {', \"android {\n namespace 'com.example.capsule'\n\")
-              open(p,'w',encoding='utf-8').write(s)
-          "
+            s=s.replace('android {', "android {\n namespace 'com.example.capsule'\n")
+            open(p,'w',encoding='utf-8').write(s)
+            print("Patched namespace")
+          PY
 
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
