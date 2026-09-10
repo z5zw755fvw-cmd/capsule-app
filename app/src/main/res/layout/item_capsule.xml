@@ -1,0 +1,21 @@
+
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="10dp"
+    app:cardCornerRadius="18dp" app:strokeWidth="2dp" app:strokeColor="#111" app:cardBackgroundColor="#FFFDA2">
+    <LinearLayout android:orientation="vertical" android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="10dp">
+        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <TextView android:id="@+id/itemMeta" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
+                android:textSize="10sp" android:textStyle="bold" android:alpha="0.65"/>
+            <TextView android:id="@+id/btnDel" android:layout_width="24dp" android:layout_height="24dp" android:text="×" android:gravity="center" android:textSize="18sp" android:textStyle="bold"/>
+        </LinearLayout>
+        <TextView android:id="@+id/itemText" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textSize="14sp" android:textIsSelectable="false" android:focusable="true" android:focusableInTouchMode="true"
+            android:background="#ffffff" android:padding="8dp" android:layout_marginTop="6dp"/>
+        <SeekBar android:id="@+id/seek" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
+        <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="2dp">
+            <Button android:id="@+id/btnPlay" android:layout_width="0dp" android:layout_weight="1" android:layout_height="32dp" android:text="▶ 播放" android:textSize="10sp"/>
+            <Button android:id="@+id/btnDelAud" android:layout_width="0dp" android:layout_weight="1" android:layout_height="32dp" android:text="删音频留文字" android:textSize="10sp" android:layout_marginLeft="6dp"/>
+            <Button android:id="@+id/btnExportOne" android:layout_width="0dp" android:layout_weight="1" android:layout_height="32dp" android:text="导出这条" android:textSize="10sp" android:layout_marginLeft="6dp"/>
+        </LinearLayout>
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>
