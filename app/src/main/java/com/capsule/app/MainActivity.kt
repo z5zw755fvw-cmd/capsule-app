@@ -39,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private val scope = CoroutineScope(Dispatchers.Main)
     private var interimFinal = ""
     private var currentSizeKB = 0
+    private var lastErrorCode = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,7 +96,7 @@ class MainActivity : AppCompatActivity() {
     private fun showKeyDialog(){
         val cur = getKey()
         val et = EditText(this); et.hint = "粘贴 Gemini API Key (aistudio.google.com)"; et.setText(cur); et.textSize = 12f
-        val msg = if(cur.isEmpty()) "首次使用请输入 Gemini Key\n只存本机，不上传，不公开\n发给朋友时是干净版，朋友自己申请\n\n提示：设了 Key 后，就算本地识别为空，也会自动用 AI 转文字" else "当前 Key: ${maskedKey(cur)}\n只存本机，可修改"
+        val msg = if(cur.isEmpty()) "请输入 Gemini Key\n只存本机，不上传\n设了之后本地识别为空也会自动用 AI 转文字" else "当前 Key: ${maskedKey(cur)}\n只存本机，可修改"
         AlertDialog.Builder(this).setTitle("Gemini Key 设置").setMessage(msg).setView(et)
             .setPositiveButton("保存"){_,_->
                 val k = et.text.toString().trim()
@@ -110,8 +111,8 @@ class MainActivity : AppCompatActivity() {
     private fun updateTop(topInfo:TextView){
         val key = getKey()
         val km = if(key.isEmpty()) "未设Key" else maskedKey(key)
-        val recInfo = if(isRec) "录制 ${currentSizeKB}KB ${interimFinal.length}字" else "就绪"
-        topInfo.text = "v29-ONLINE • $recInfo • 已存${capsules.size}条 • $km"
+        val recInfo = if(isRec) "录制 ${currentSizeKB}KB ${interimFinal.length}字 err=$lastErrorCode" else "就绪"
+        topInfo.text = "v31-ROBUST • $recInfo • 已存${capsules.size}条 • $km"
     }
 
     private fun buildSpeechIntent(): android.content.Intent {
@@ -122,7 +123,6 @@ class MainActivity : AppCompatActivity() {
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
             putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
-            // 强制在线，避免 Pixel 9 离线中文包为空的问题
         }
     }
 
@@ -130,36 +130,47 @@ class MainActivity : AppCompatActivity() {
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ checkPerm(); return }
         if(!SpeechRecognizer.isRecognitionAvailable(this)){
             Toast.makeText(this,"本机不支持语音识别，请装 Google App 并联网",Toast.LENGTH_LONG).show()
+            status.text = "本机不支持识别"
             return
         }
         try{
             interimFinal=""
+            lastErrorCode = -1
             liveText.text=""
             status.text="启动识别(在线)..."
             speechRec=SpeechRecognizer.createSpeechRecognizer(applicationContext).apply {
                 setRecognitionListener(object: RecognitionListener{
                     override fun onReadyForSpeech(p:Bundle?){ status.text="听着呢(在线)..." }
-                    override fun onBeginningOfSpeech(){ status.text="识别中..." }
+                    override fun onBeginningOfSpeech(){ status.text="识别中..."; lastErrorCode = 0; updateTop(topInfo) }
                     override fun onRmsChanged(v:Float){}
                     override fun onBufferReceived(b:ByteArray?){}
-                    override fun onEndOfSpeech(){ status.text="处理语音..." }
+                    override fun onEndOfSpeech(){ status.text="处理语音...  err=$lastErrorCode" }
                     override fun onError(e:Int){
                         Log.e("capsule","onError:$e")
-                        // 7=NO_MATCH 6=NETWORK 5=CLIENT 2=NETWORK_TIMEOUT
+                        lastErrorCode = e
+                        // 错误码：1=网络超时 2=网络 3=音频 4=服务器 5=客户端 6=无语音 7=无匹配 8=识别忙 9=权限
+                        val errMsg = when(e){
+                            1->"网络超时"
+                            2->"网络错误"
+                            3->"音频错误"
+                            4->"服务器错误"
+                            5->"客户端错误"
+                            6->"没听见声音"
+                            7->"无匹配(试试说长一点)"
+                            8->"识别器忙"
+                            9->"权限不足"
+                            else->"错误$e"
+                        }
+                        status.text = "识别$errMsg，自动重试..."
+                        liveText.text = "本地识别$errMsg(${e})，继续录音，结束时会用 Gemini 转文字"
+                        updateTop(topInfo)
                         if(isRec){
-                            if(e==7 || e==6 || e==2){
-                                status.text="在线重试...($e)"
-                                // 小延迟重试
-                                android.os.Handler(mainLooper).postDelayed({ restartSpeech(liveText, topInfo) }, 300)
-                            } else if(e!=5 && e!=9){
-                                restartSpeech(liveText, topInfo)
-                            }
+                            android.os.Handler(mainLooper).postDelayed({ restartSpeech(liveText, topInfo) }, 500)
                         }
                     }
                     override fun onResults(r:Bundle?){
                         val list = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                         if(!list.isNullOrEmpty()){
-                            // 拼接，不覆盖
                             val best = list[0]
                             if(best.isNotBlank()){
                                 interimFinal += best
@@ -196,9 +207,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun restartSpeech(liveText:TextView, topInfo:TextView){
         if(!isRec) return
-        try{
-            speechRec?.startListening(buildSpeechIntent())
-        }catch(e:Exception){ Log.e("capsule","restart failed",e) }
+        try{ speechRec?.startListening(buildSpeechIntent()) }catch(e:Exception){ Log.e("capsule","restart failed",e) }
     }
 
     private fun stopAll(status:TextView, liveText:TextView, topInfo:TextView){
@@ -209,7 +218,7 @@ class MainActivity : AppCompatActivity() {
         recorder=null
         status.text="处理中..."
         val file = audioFile
-        val localText = interimFinal.ifBlank { liveText.text.toString() }
+        val localText = interimFinal.ifBlank { liveText.text.toString().let { if(it.contains("本地识别")) "" else it } }
         if(file==null || !file.exists()){
             status.text="点一下开始"; return
         }
@@ -219,11 +228,17 @@ class MainActivity : AppCompatActivity() {
             var finalText = localText
             if(key.isNotEmpty()){
                 status.text="AI 上下文校正中..."
-                liveText.text = "Google AI 按上下文纠错中... ${localText.take(30)}"
+                liveText.text = "正在用 Gemini 转文字...本地:${localText.take(20)} 原声${size}KB"
                 finalText = transcribeWithGemini(file, key, localText)
+                if(finalText.startsWith("Gemini失败")){
+                    liveText.text = finalText
+                }
             }
             if(finalText.isBlank()){
-                finalText = localText.ifBlank { "（本地识别为空，原声已保留，${size}KB，请检查是否联网+已设Gemini Key自动转文字）" }
+                finalText = localText.ifBlank { 
+                    if(key.isEmpty()) "（本地识别为空，原声已保留，${size}KB，请联网并设置Gemini Key自动转文字，err=$lastErrorCode）"
+                    else "（本地识别为空，Gemini也未返回，${size}KB，err=$lastErrorCode，请检查Key和网络）"
+                }
             }
             val cap = Capsule(System.currentTimeMillis().toString(), finalText, file.absolutePath, true, laNow(), size)
             capsules.add(0, cap); adapter.notifyItemInserted(0); updateTop(topInfo)
@@ -243,14 +258,29 @@ class MainActivity : AppCompatActivity() {
                     })
                 }))
             }
-            val req = Request.Builder().url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
-                .post(json.toString().toRequestBody("application/json".toMediaType())).build()
-            val resp = client.newCall(req).execute()
-            val body = resp.body?.string() ?: ""
-            val obj = JSONObject(body)
-            val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text") ?: ""
-            if(txt.isNotBlank()) txt.trim() else hint
-        }catch(e:Exception){ Log.e("capsule","gemini failed",e); hint.ifBlank { "（AI 校正失败，原声已保留） ${e.message}" } }
+            // 用新模型，兼容旧
+            val models = listOf("gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash")
+            var lastErr = ""
+            for(model in models){
+                try{
+                    val req = Request.Builder().url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey")
+                        .post(json.toString().toRequestBody("application/json".toMediaType())).build()
+                    val resp = client.newCall(req).execute()
+                    val body = resp.body?.string() ?: ""
+                    Log.d("capsule","gemini $model resp:$body")
+                    if(!resp.isSuccessful){
+                        lastErr = "HTTP ${resp.code} $body"
+                        if(resp.code==404) continue
+                        else return@withContext "Gemini失败: $lastErr"
+                    }
+                    val obj = JSONObject(body)
+                    val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text") ?: ""
+                    if(txt.isNotBlank()) return@withContext txt.trim()
+                    else lastErr = "空返回 $body"
+                }catch(e:Exception){ lastErr = e.message ?: "unknown"; Log.e("capsule","gemini $model failed",e) }
+            }
+            return@withContext "Gemini失败: $lastErr"
+        }catch(e:Exception){ Log.e("capsule","gemini failed",e); "Gemini失败: ${e.message}" }
     }
     private fun exportAll(){
         if(capsules.isEmpty()){ Toast.makeText(this,"没有记录",Toast.LENGTH_SHORT).show(); return }
