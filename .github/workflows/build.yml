@@ -23,23 +23,22 @@ jobs:
       - name: Patch build.gradle
         run: |
           python3 << 'PY'
-          import os
           p='app/build.gradle'
           s=open(p,encoding='utf-8',errors='ignore').read()
-          print(s[:4000])
           if 'namespace' not in s:
             s=s.replace('android {',"android {\n namespace 'com.example.capsule'\n")
             open(p,'w',encoding='utf-8').write(s)
           PY
       - name: Build Debug APK
+        run: gradle assembleDebug --stacktrace
+      - name: Find APK
         run: |
-          gradle assembleDebug --stacktrace 2>&1 | tee full.log
-          echo "================ 错误总结 ================"
-          grep -i -A 8 "FAILED\|error:\|Could not\|namespace" full.log | tail -n 200
-        continue-on-error: true
+          find. -name "*.apk" -type f
+          ls -R | grep -i apk
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: capsule-app-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: ignore
+          path: |
+            **/*.apk
+            app/build/outputs/**/*.apk
