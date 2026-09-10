@@ -5,42 +5,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
+
       - name: Auto Fix Folder Name
         run: |
-          python3 << 'PY'
-          import os, shutil
-          for d in os.listdir('.'):
-            if os.path.isdir(d) and d!='app' and os.path.exists(os.path.join(d,'src')):
-              if os.path.exists('app'): shutil.rmtree('app')
-              shutil.move(d,'app')
-              break
-          PY
-      - name: Patch build.gradle
+          for d in *; do [ -d "$d/src" ] && [ "$d"!= "app" ] && rm -rf app && mv "$d" app && break; done
+
+      - name: Patch gradle.properties - 修AndroidX
         run: |
-          python3 << 'PY'
+          echo "android.useAndroidX=true" >> gradle.properties
+          echo "android.enableJetifier=true" >> gradle.properties
+          cat gradle.properties
+          # 防止写到 app 里也写一份
+          echo "android.useAndroidX=true" >> app/gradle.properties 2>/dev/null || true
+          echo "android.enableJetifier=true" >> app/gradle.properties 2>/dev/null || true
+
+      - name: Patch build.gradle - 修namespace
+        run: |
+          python3 -c "
           p='app/build.gradle'
           s=open(p,encoding='utf-8',errors='ignore').read()
           if 'namespace' not in s:
-            s=s.replace('android {',"android {\n namespace 'com.example.capsule'\n")
-            open(p,'w',encoding='utf-8').write(s)
-          PY
+              s=s.replace('android {', \"android {\n namespace 'com.example.capsule'\n\")
+              open(p,'w',encoding='utf-8').write(s)
+          "
+
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
         with:
           gradle-version: 8.5
           arguments: assembleDebug --stacktrace
-      - name: Find APK where is it
+
+      - name: Find APK
         run: find. -name "*.apk" -type f
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: capsule-app-apk
-          path: |
-            **/*.apk
+          path: "**/*.apk"
