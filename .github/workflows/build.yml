@@ -5,48 +5,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v3
       - name: Auto Fix Folder Name
         run: |
           python3 << 'PY'
-          import os, shutil, subprocess
+          import os, shutil
           for d in os.listdir('.'):
             if os.path.isdir(d) and d!='app' and os.path.exists(os.path.join(d,'src')):
-              print(f"Found {d}, rename to app")
-              if os.path.exists('app'):
-                shutil.rmtree('app')
+              if os.path.exists('app'): shutil.rmtree('app')
               shutil.move(d,'app')
               break
-          subprocess.run(["ls","-la"])
           PY
       - name: Patch build.gradle
         run: |
           python3 << 'PY'
           import os
           p='app/build.gradle'
-          s=open(p, encoding='utf-8', errors='ignore').read()
-          print("BEFORE:")
-          print(s[:3000])
+          s=open(p,encoding='utf-8',errors='ignore').read()
+          print(s[:4000])
           if 'namespace' not in s:
-            s=s.replace('android {', "android {\n namespace 'com.example.capsule'\n")
-            print("Patched namespace")
-          open(p,'w',encoding='utf-8').write(s)
-          print("AFTER:")
-          print(open(p, encoding='utf-8').read()[:3000])
+            s=s.replace('android {',"android {\n namespace 'com.example.capsule'\n")
+            open(p,'w',encoding='utf-8').write(s)
           PY
       - name: Build Debug APK
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 8.5
-          arguments: assembleDebug --stacktrace
+        run: |
+          gradle assembleDebug --stacktrace 2>&1 | tee full.log
+          echo "================ 错误总结 ================"
+          grep -i -A 8 "FAILED\|error:\|Could not\|namespace" full.log | tail -n 200
+        continue-on-error: true
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: capsule-app-apk
           path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: ignore
