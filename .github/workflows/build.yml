@@ -68,7 +68,7 @@ jobs:
 
       - name: Find APK
         run: |
-          find. -name "*.apk" -type f
+          find . -name "*.apk" -type f
           ls -lh app/build/outputs/apk/debug/ || true
 
       - name: Upload APK
