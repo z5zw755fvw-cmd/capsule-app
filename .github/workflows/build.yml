@@ -25,11 +25,26 @@ jobs:
               break
           subprocess.run(["ls","-la"])
           PY
+      - name: Patch build.gradle
+        run: |
+          python3 << 'PY'
+          import os
+          p='app/build.gradle'
+          s=open(p, encoding='utf-8', errors='ignore').read()
+          print("BEFORE:")
+          print(s[:3000])
+          if 'namespace' not in s:
+            s=s.replace('android {', "android {\n namespace 'com.example.capsule'\n")
+            print("Patched namespace")
+          open(p,'w',encoding='utf-8').write(s)
+          print("AFTER:")
+          print(open(p, encoding='utf-8').read()[:3000])
+          PY
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: assembleDebug
           gradle-version: 8.5
+          arguments: assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
