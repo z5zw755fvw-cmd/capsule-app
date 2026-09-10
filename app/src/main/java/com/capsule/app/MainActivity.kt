@@ -42,34 +42,39 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        val topInfo = findViewById<TextView>(R.id.topInfo)
-        val btnGear = findViewById<TextView>(R.id.btnGear)
-        val recCard = findViewById<MaterialCardView>(R.id.recCard)
-        val status = findViewById<TextView>(R.id.status)
-        val liveText = findViewById<TextView>(R.id.liveText)
-        val list = findViewById<RecyclerView>(R.id.list)
-        list.layoutManager = LinearLayoutManager(this)
-        adapter = Ad(capsules) { updateTop(topInfo) }
-        list.adapter = adapter
-        checkPerm()
-        updateTop(topInfo)
-        maybeShowKeyDialog(first = true)
-        btnGear.setOnClickListener { showKeyDialog() }
-        val startStop = {
-            if(isRec) stopAll(status, liveText, topInfo) else startAll(status, liveText, topInfo)
-        }
-        recCard.setOnClickListener { startStop() }
-        findViewById<Button>(R.id.btnExportAll).setOnClickListener { exportAll() }
-        findViewById<Button>(R.id.btnDelAllAud).setOnClickListener {
-            if(capsules.any { it.hasAudio }){
-                capsules.forEach { it.audioPath?.let { p-> File(p).delete() }; it.audioPath=null; it.hasAudio=false }
-                adapter.notifyDataSetChanged(); updateTop(topInfo); Toast.makeText(this,"已删全部音频",Toast.LENGTH_SHORT).show()
+        try {
+            setContentView(R.layout.activity_main)
+            val topInfo = findViewById<TextView>(R.id.topInfo)
+            val btnGear = findViewById<TextView>(R.id.btnGear)
+            val recCard = findViewById<MaterialCardView>(R.id.recCard)
+            val status = findViewById<TextView>(R.id.status)
+            val liveText = findViewById<TextView>(R.id.liveText)
+            val list = findViewById<RecyclerView>(R.id.list)
+            list.layoutManager = LinearLayoutManager(this)
+            adapter = Ad(capsules) { updateTop(topInfo) }
+            list.adapter = adapter
+            checkPerm()
+            updateTop(topInfo)
+            maybeShowKeyDialog(first = true)
+            btnGear.setOnClickListener { showKeyDialog() }
+            val startStop = {
+                if(isRec) stopAll(status, liveText, topInfo) else startAll(status, liveText, topInfo)
             }
-        }
-        findViewById<Button>(R.id.btnClear).setOnClickListener {
-            capsules.forEach { it.audioPath?.let { p-> File(p).delete() } }
-            capsules.clear(); adapter.notifyDataSetChanged(); updateTop(topInfo)
+            recCard.setOnClickListener { startStop() }
+            findViewById<Button>(R.id.btnExportAll).setOnClickListener { exportAll() }
+            findViewById<Button>(R.id.btnDelAllAud).setOnClickListener {
+                if(capsules.any { it.hasAudio }){
+                    capsules.forEach { it.audioPath?.let { p-> File(p).delete() }; it.audioPath=null; it.hasAudio=false }
+                    adapter.notifyDataSetChanged(); updateTop(topInfo); Toast.makeText(this,"已删全部音频",Toast.LENGTH_SHORT).show()
+                }
+            }
+            findViewById<Button>(R.id.btnClear).setOnClickListener {
+                capsules.forEach { it.audioPath?.let { p-> File(p).delete() } }
+                capsules.clear(); adapter.notifyDataSetChanged(); updateTop(topInfo)
+            }
+        } catch(e: Exception){
+            Log.e("capsule", "onCreate crash", e)
+            Toast.makeText(this, "启动失败: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -81,7 +86,7 @@ class MainActivity : AppCompatActivity() {
     private fun laNow():String{
         val sdf=SimpleDateFormat("MM/dd HH:mm:ss", Locale.US); sdf.timeZone=TimeZone.getTimeZone("America/Los_Angeles"); return "洛杉矶 ${sdf.format(Date())}"
     }
-    private fun getKey():String = getSharedPreferences("caps", MODE_PRIVATE).getString("gemini_key","") ?: ""
+    private fun getKey():String = getSharedPreferences("caps", MODE_PRIVATE).getString("gemini_key","")?: ""
     private fun maskedKey(k:String):String = if(k.length<=4) "••••" else "••••${k.takeLast(4)}"
     private fun maybeShowKeyDialog(first:Boolean){
         if(first && getKey().isNotEmpty()) return
@@ -92,7 +97,7 @@ class MainActivity : AppCompatActivity() {
         val et = EditText(this); et.hint = "粘贴 Gemini API Key (aistudio.google.com)"; et.setText(cur); et.textSize = 12f
         val msg = if(cur.isEmpty()) "首次使用请输入 Gemini Key\n只存本机，不上传，不公开\n发给朋友时是干净版，朋友自己申请" else "当前 Key: ${maskedKey(cur)}\n只存本机，可修改"
         AlertDialog.Builder(this).setTitle("Gemini Key 设置").setMessage(msg).setView(et)
-            .setPositiveButton("保存"){_,_->
+           .setPositiveButton("保存"){_,_->
                 val k = et.text.toString().trim()
                 if(k.isNotEmpty()){
                     getSharedPreferences("caps", MODE_PRIVATE).edit().putString("gemini_key", k).apply()
@@ -100,13 +105,13 @@ class MainActivity : AppCompatActivity() {
                     updateTop(findViewById(R.id.topInfo))
                 }
             }
-            .setNegativeButton("取消",null).show()
+           .setNegativeButton("取消",null).show()
     }
     private fun updateTop(topInfo:TextView){
         val key = getKey()
         val km = if(key.isEmpty()) "未设Key" else maskedKey(key)
         val recInfo = if(isRec) "录制 ${currentSizeKB}KB ${interimFinal.length}字" else "就绪"
-        topInfo.text = "v27 • $recInfo • 已存${capsules.size}条 • $km"
+        topInfo.text = "v29-Pixel9 • $recInfo • 已存${capsules.size}条 • $km"
     }
 
     private fun startAll(status:TextView, liveText:TextView, topInfo:TextView){
@@ -119,7 +124,6 @@ class MainActivity : AppCompatActivity() {
             interimFinal=""
             liveText.text=""
             status.text="启动识别..."
-            // 关键修复1：用 applicationContext 创建，避免 attributionTag 错误
             speechRec=SpeechRecognizer.createSpeechRecognizer(applicationContext).apply {
                 setRecognitionListener(object: RecognitionListener{
                     override fun onReadyForSpeech(p:Bundle?){ status.text="听着呢..."; Log.d("capsule","onReady") }
@@ -129,8 +133,7 @@ class MainActivity : AppCompatActivity() {
                     override fun onEndOfSpeech(){ Log.d("capsule","onEndOfSpeech") }
                     override fun onError(e:Int){
                         Log.e("capsule","onError:$e")
-                        // 关键修复2：如果是抢麦错误 5=CLIENT 9=INSUFFICIENT_PERMISSIONS 就不要死循环重启
-                        if(isRec && e!=SpeechRecognizer.ERROR_CLIENT && e!=SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
+                        if(isRec && e!=5 && e!=9){
                             restartSpeech(liveText, topInfo)
                         } else {
                             status.text="识别暂停(录音中)"
@@ -138,7 +141,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     override fun onResults(r:Bundle?){
                         val list = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        Log.d("capsule","onResults:${list?.firstOrNull()}")
                         if(!list.isNullOrEmpty()){ interimFinal += list[0]; liveText.text = interimFinal; updateTop(topInfo) }
                         if(isRec) restartSpeech(liveText, topInfo)
                     }
@@ -156,12 +158,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 startListening(intent)
             }
-
-            // 关键修复3：延迟200ms再启动录音，避免同时抢MIC
             val dir=File(getExternalFilesDir(null), "capsules"); if(!dir.exists()) dir.mkdirs()
             audioFile=File(dir, "cap_${System.currentTimeMillis()}.m4a")
-            // 使用 applicationContext 的 MediaRecorder 兼容写法
-            recorder = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(applicationContext) else MediaRecorder()
+            recorder = MediaRecorder()
             recorder?.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -169,7 +168,6 @@ class MainActivity : AppCompatActivity() {
                 setAudioChannels(1); setAudioSamplingRate(16000); setAudioEncodingBitRate(32000)
                 setOutputFile(audioFile!!.absolutePath); prepare(); start()
             }
-
             isRec=true; currentSizeKB=0; status.text="录写中...再点结束"
             scope.launch { while(isRec){ audioFile?.let { currentSizeKB = (it.length()/1024).toInt() }; updateTop(topInfo); delay(500) } }
         }catch(e:Exception){ Log.e("capsule","startAll failed",e); Toast.makeText(this,"开始失败 ${e.message}",Toast.LENGTH_SHORT).show() }
@@ -194,7 +192,7 @@ class MainActivity : AppCompatActivity() {
         status.text="处理中..."
         val file = audioFile
         val localText = interimFinal.ifBlank { liveText.text.toString() }
-        if(file==null || !file.exists()){
+        if(file==null ||!file.exists()){
             status.text="点一下开始"; return
         }
         val size = (file.length()/1024).toInt()
@@ -205,7 +203,6 @@ class MainActivity : AppCompatActivity() {
                 status.text="AI 上下文校正中..."
                 liveText.text = "Google AI 按上下文纠错中..."
                 finalText = transcribeWithGemini(file, key, localText)
-                Log.d("capsule","finalText from Gemini: $finalText")
             }
             if(finalText.isBlank()){
                 finalText = localText.ifBlank { "（本地识别为空，原声已保留，${size}KB）" }
@@ -224,16 +221,16 @@ class MainActivity : AppCompatActivity() {
                 put("contents", org.json.JSONArray().put(JSONObject().apply{
                     put("parts", org.json.JSONArray().apply{
                         put(JSONObject().apply{ put("inline_data", JSONObject().apply{ put("mime_type","audio/mp4"); put("data", b64) }) })
-                        put(JSONObject().apply{ put("text","本地初步识别为：${hint.take(200)}。请结合音频，把这段中文语音转成最终文字，要求：1. 根据上下文纠正同音字，短句“开始吧”不要识别成 S8 2. 保留口语，不要乱码 3. 只返回最终文字。") })
+                        put(JSONObject().apply{ put("text","本地初步识别为：${hint.take(200)}。请结合音频，把这段中文语音转成最终文字，要求：1. 根据上下文纠正同音字 2. 保留口语 3. 只返回最终文字。") })
                     })
                 }))
             }
             val req = Request.Builder().url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
-                .post(json.toString().toRequestBody("application/json".toMediaType())).build()
+               .post(json.toString().toRequestBody("application/json".toMediaType())).build()
             val resp = client.newCall(req).execute()
-            val body = resp.body?.string() ?: ""
+            val body = resp.body?.string()?: ""
             val obj = JSONObject(body)
-            val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text") ?: ""
+            val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")?: ""
             if(txt.isNotBlank()) txt.trim() else hint
         }catch(e:Exception){ Log.e("capsule","gemini failed",e); hint.ifBlank { "（AI 校正失败，原声已保留） ${e.message}" } }
     }
@@ -259,7 +256,7 @@ class MainActivity : AppCompatActivity() {
             h.txt.setOnClickListener{
                 val et=EditText(h.itemView.context); et.setText(c.text)
                 AlertDialog.Builder(h.itemView.context).setTitle("编辑文字").setView(et)
-                    .setPositiveButton("保存"){_,_-> c.text=et.text.toString(); h.txt.text=c.text; h.meta.text="${c.laTime} • ${c.sizeKB}KB • ${c.text.length}字 • ${if(c.hasAudio) "有音频" else "已释放"}" }.show()
+                   .setPositiveButton("保存"){_,_-> c.text=et.text.toString(); h.txt.text=c.text; h.meta.text="${c.laTime} • ${c.sizeKB}KB • ${c.text.length}字 • ${if(c.hasAudio) "有音频" else "已释放"}" }.show()
             }
             h.play.setOnClickListener{
                 c.audioPath?.let{ path->
