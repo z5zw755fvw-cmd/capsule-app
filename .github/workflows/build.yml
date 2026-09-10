@@ -27,7 +27,7 @@ jobs:
           echo "android.useAndroidX=true" >> gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
 
-      - name: Patch build.gradle
+      - name: Patch build.gradle - 保持Material3
         run: |
           python3 << 'PY'
           import re
@@ -43,31 +43,30 @@ jobs:
           open(p,'w',encoding='utf-8').write(s)
           PY
 
-      - name: Patch Manifest - 关键修复
+      - name: Patch Manifest and Themes - 修复@style/，不降级
         run: |
           python3 << 'PY'
           import glob, re
-          # 修 Manifest - 直接换成系统自带主题，100%兼容
+          # 1. 修 AndroidManifest.xml - 保留 Material3，只补上 @style/
           for f in glob.glob('app/src/main/AndroidManifest.xml'):
             s=open(f,encoding='utf-8',errors='ignore').read()
-            print("修复前第20行附近:", s[500:800])
-            # 把所有 Material 主题都换成最安全的系统主题
-            s=re.sub(r'android:theme="@[^"]*Material[^"]*"', 'android:theme="@android:style/Theme.Light.NoTitleBar"', s)
-            s=re.sub(r'android:theme="@Theme\.[^"]*"', 'android:theme="@android:style/Theme.Light.NoTitleBar"', s)
-            s=re.sub(r'@Theme\.', '@style/Theme.', s)
-            s=s.replace('Theme.Material3','Theme.MaterialComponents')
+            s=s.replace('@Theme.Material3', '@style/Theme.Material3')
+            s=s.replace('@Theme.MaterialComponents', '@style/Theme.MaterialComponents')
+            s=re.sub(r'"@Theme\.', '"@style/Theme.', s)
+            s=re.sub(r"'@Theme\.", "'@style/Theme.", s)
+            s=s.replace('@style/@style/', '@style/')
             open(f,'w',encoding='utf-8').write(s)
-            print("修复后:", open(f).read()[500:800])
-          # 修 values 里的 themes.xml / styles.xml
-          for f in glob.glob('app/src/main/res/**/*.xml', recursive=True):
-            try:
-              s=open(f,encoding='utf-8',errors='ignore').read()
-              if 'Material3' in s or '@Theme.' in s:
-                s=s.replace('@Theme.', '@style/Theme.')
-                s=s.replace('Theme.Material3','Theme.MaterialComponents')
-                s=s.replace('@style/@style/','@style/')
-                open(f,'w',encoding='utf-8').write(s)
-            except: pass
+            print("Manifest 已修复，保留 Material3")
+
+          # 2. 修 themes.xml / styles.xml - 同样保留 Material3，只修格式
+          for f in glob.glob('app/src/main/res/**/themes.xml', recursive=True) + glob.glob('app/src/main/res/**/styles.xml', recursive=True):
+            s=open(f,encoding='utf-8',errors='ignore').read()
+            orig=s
+            s=s.replace('@Theme.', '@style/Theme.')
+            s=s.replace('@style/@style/', '@style/')
+            if s!=orig:
+              open(f,'w',encoding='utf-8').write(s)
+              print(f"已修复 {f}")
           PY
 
       - name: Build Debug APK
