@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
     private fun laNow():String{
         val sdf=SimpleDateFormat("MM/dd HH:mm:ss", Locale.US); sdf.timeZone=TimeZone.getTimeZone("America/Los_Angeles"); return "洛杉矶 ${sdf.format(Date())}"
     }
-    private fun getKey():String = getSharedPreferences("caps", MODE_PRIVATE).getString("gemini_key","")?: ""
+    private fun getKey():String = getSharedPreferences("caps", MODE_PRIVATE).getString("gemini_key","") ?: ""
     private fun maskedKey(k:String):String = if(k.length<=4) "••••" else "••••${k.takeLast(4)}"
     private fun maybeShowKeyDialog(first:Boolean){
         if(first && getKey().isNotEmpty()) return
@@ -97,7 +97,7 @@ class MainActivity : AppCompatActivity() {
         val et = EditText(this); et.hint = "粘贴 Gemini API Key (aistudio.google.com)"; et.setText(cur); et.textSize = 12f
         val msg = if(cur.isEmpty()) "首次使用请输入 Gemini Key\n只存本机，不上传，不公开\n发给朋友时是干净版，朋友自己申请" else "当前 Key: ${maskedKey(cur)}\n只存本机，可修改"
         AlertDialog.Builder(this).setTitle("Gemini Key 设置").setMessage(msg).setView(et)
-           .setPositiveButton("保存"){_,_->
+            .setPositiveButton("保存"){_,_->
                 val k = et.text.toString().trim()
                 if(k.isNotEmpty()){
                     getSharedPreferences("caps", MODE_PRIVATE).edit().putString("gemini_key", k).apply()
@@ -105,13 +105,13 @@ class MainActivity : AppCompatActivity() {
                     updateTop(findViewById(R.id.topInfo))
                 }
             }
-           .setNegativeButton("取消",null).show()
+            .setNegativeButton("取消",null).show()
     }
     private fun updateTop(topInfo:TextView){
         val key = getKey()
         val km = if(key.isEmpty()) "未设Key" else maskedKey(key)
         val recInfo = if(isRec) "录制 ${currentSizeKB}KB ${interimFinal.length}字" else "就绪"
-        topInfo.text = "v29-Pixel9 • $recInfo • 已存${capsules.size}条 • $km"
+        topInfo.text = "v28-FIX • $recInfo • 已存${capsules.size}条 • $km"
     }
 
     private fun startAll(status:TextView, liveText:TextView, topInfo:TextView){
@@ -160,6 +160,7 @@ class MainActivity : AppCompatActivity() {
             }
             val dir=File(getExternalFilesDir(null), "capsules"); if(!dir.exists()) dir.mkdirs()
             audioFile=File(dir, "cap_${System.currentTimeMillis()}.m4a")
+            // 回退到最稳的构造，不用 applicationContext
             recorder = MediaRecorder()
             recorder?.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -192,7 +193,7 @@ class MainActivity : AppCompatActivity() {
         status.text="处理中..."
         val file = audioFile
         val localText = interimFinal.ifBlank { liveText.text.toString() }
-        if(file==null ||!file.exists()){
+        if(file==null || !file.exists()){
             status.text="点一下开始"; return
         }
         val size = (file.length()/1024).toInt()
@@ -226,11 +227,11 @@ class MainActivity : AppCompatActivity() {
                 }))
             }
             val req = Request.Builder().url("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey")
-               .post(json.toString().toRequestBody("application/json".toMediaType())).build()
+                .post(json.toString().toRequestBody("application/json".toMediaType())).build()
             val resp = client.newCall(req).execute()
-            val body = resp.body?.string()?: ""
+            val body = resp.body?.string() ?: ""
             val obj = JSONObject(body)
-            val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")?: ""
+            val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text") ?: ""
             if(txt.isNotBlank()) txt.trim() else hint
         }catch(e:Exception){ Log.e("capsule","gemini failed",e); hint.ifBlank { "（AI 校正失败，原声已保留） ${e.message}" } }
     }
@@ -256,7 +257,7 @@ class MainActivity : AppCompatActivity() {
             h.txt.setOnClickListener{
                 val et=EditText(h.itemView.context); et.setText(c.text)
                 AlertDialog.Builder(h.itemView.context).setTitle("编辑文字").setView(et)
-                   .setPositiveButton("保存"){_,_-> c.text=et.text.toString(); h.txt.text=c.text; h.meta.text="${c.laTime} • ${c.sizeKB}KB • ${c.text.length}字 • ${if(c.hasAudio) "有音频" else "已释放"}" }.show()
+                    .setPositiveButton("保存"){_,_-> c.text=et.text.toString(); h.txt.text=c.text; h.meta.text="${c.laTime} • ${c.sizeKB}KB • ${c.text.length}字 • ${if(c.hasAudio) "有音频" else "已释放"}" }.show()
             }
             h.play.setOnClickListener{
                 c.audioPath?.let{ path->
