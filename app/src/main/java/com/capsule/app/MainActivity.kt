@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity() {
     private fun showKeyDialog(){
         val cur = getKey()
         val et = EditText(this); et.hint = "粘贴 Gemini API Key (aistudio.google.com)"; et.setText(cur); et.textSize = 12f
-        val msg = if(cur.isEmpty()) "首次使用请输入 Gemini Key\n只存本机，不上传，不公开\n发给朋友时是干净版，朋友自己申请" else "当前 Key: ${maskedKey(cur)}\n只存本机，可修改"
+        val msg = if(cur.isEmpty()) "首次使用请输入 Gemini Key\n只存本机，不上传，不公开\n发给朋友时是干净版，朋友自己申请\n\n提示：设了 Key 后，就算本地识别为空，也会自动用 AI 转文字" else "当前 Key: ${maskedKey(cur)}\n只存本机，可修改"
         AlertDialog.Builder(this).setTitle("Gemini Key 设置").setMessage(msg).setView(et)
             .setPositiveButton("保存"){_,_->
                 val k = et.text.toString().trim()
@@ -111,56 +111,76 @@ class MainActivity : AppCompatActivity() {
         val key = getKey()
         val km = if(key.isEmpty()) "未设Key" else maskedKey(key)
         val recInfo = if(isRec) "录制 ${currentSizeKB}KB ${interimFinal.length}字" else "就绪"
-        topInfo.text = "v28-FIX • $recInfo • 已存${capsules.size}条 • $km"
+        topInfo.text = "v29-ONLINE • $recInfo • 已存${capsules.size}条 • $km"
+    }
+
+    private fun buildSpeechIntent(): android.content.Intent {
+        return android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+            putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false)
+            putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
+            // 强制在线，避免 Pixel 9 离线中文包为空的问题
+        }
     }
 
     private fun startAll(status:TextView, liveText:TextView, topInfo:TextView){
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ checkPerm(); return }
         if(!SpeechRecognizer.isRecognitionAvailable(this)){
-            Toast.makeText(this,"本机不支持语音识别，请装 Google App",Toast.LENGTH_LONG).show()
+            Toast.makeText(this,"本机不支持语音识别，请装 Google App 并联网",Toast.LENGTH_LONG).show()
             return
         }
         try{
             interimFinal=""
             liveText.text=""
-            status.text="启动识别..."
+            status.text="启动识别(在线)..."
             speechRec=SpeechRecognizer.createSpeechRecognizer(applicationContext).apply {
                 setRecognitionListener(object: RecognitionListener{
-                    override fun onReadyForSpeech(p:Bundle?){ status.text="听着呢..."; Log.d("capsule","onReady") }
-                    override fun onBeginningOfSpeech(){}
+                    override fun onReadyForSpeech(p:Bundle?){ status.text="听着呢(在线)..." }
+                    override fun onBeginningOfSpeech(){ status.text="识别中..." }
                     override fun onRmsChanged(v:Float){}
                     override fun onBufferReceived(b:ByteArray?){}
-                    override fun onEndOfSpeech(){ Log.d("capsule","onEndOfSpeech") }
+                    override fun onEndOfSpeech(){ status.text="处理语音..." }
                     override fun onError(e:Int){
                         Log.e("capsule","onError:$e")
-                        if(isRec && e!=5 && e!=9){
-                            restartSpeech(liveText, topInfo)
-                        } else {
-                            status.text="识别暂停(录音中)"
+                        // 7=NO_MATCH 6=NETWORK 5=CLIENT 2=NETWORK_TIMEOUT
+                        if(isRec){
+                            if(e==7 || e==6 || e==2){
+                                status.text="在线重试...($e)"
+                                // 小延迟重试
+                                android.os.Handler(mainLooper).postDelayed({ restartSpeech(liveText, topInfo) }, 300)
+                            } else if(e!=5 && e!=9){
+                                restartSpeech(liveText, topInfo)
+                            }
                         }
                     }
                     override fun onResults(r:Bundle?){
                         val list = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        if(!list.isNullOrEmpty()){ interimFinal += list[0]; liveText.text = interimFinal; updateTop(topInfo) }
+                        if(!list.isNullOrEmpty()){
+                            // 拼接，不覆盖
+                            val best = list[0]
+                            if(best.isNotBlank()){
+                                interimFinal += best
+                                liveText.text = interimFinal
+                                updateTop(topInfo)
+                            }
+                        }
                         if(isRec) restartSpeech(liveText, topInfo)
                     }
                     override fun onPartialResults(p:Bundle?){
                         val list = p?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        if(!list.isNullOrEmpty()){ liveText.text = interimFinal + list[0]; updateTop(topInfo) }
+                        if(!list.isNullOrEmpty()){
+                            liveText.text = interimFinal + list[0]
+                        }
                     }
                     override fun onEvent(t:Int,b:Bundle?){}
                 })
-                val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                }
-                startListening(intent)
+                startListening(buildSpeechIntent())
             }
             val dir=File(getExternalFilesDir(null), "capsules"); if(!dir.exists()) dir.mkdirs()
             audioFile=File(dir, "cap_${System.currentTimeMillis()}.m4a")
-            // 回退到最稳的构造，不用 applicationContext
             recorder = MediaRecorder()
             recorder?.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -169,7 +189,7 @@ class MainActivity : AppCompatActivity() {
                 setAudioChannels(1); setAudioSamplingRate(16000); setAudioEncodingBitRate(32000)
                 setOutputFile(audioFile!!.absolutePath); prepare(); start()
             }
-            isRec=true; currentSizeKB=0; status.text="录写中...再点结束"
+            isRec=true; currentSizeKB=0; status.text="录写中(在线)...再点结束"
             scope.launch { while(isRec){ audioFile?.let { currentSizeKB = (it.length()/1024).toInt() }; updateTop(topInfo); delay(500) } }
         }catch(e:Exception){ Log.e("capsule","startAll failed",e); Toast.makeText(this,"开始失败 ${e.message}",Toast.LENGTH_SHORT).show() }
     }
@@ -177,10 +197,7 @@ class MainActivity : AppCompatActivity() {
     private fun restartSpeech(liveText:TextView, topInfo:TextView){
         if(!isRec) return
         try{
-            val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN"); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            }
-            speechRec?.startListening(intent)
+            speechRec?.startListening(buildSpeechIntent())
         }catch(e:Exception){ Log.e("capsule","restart failed",e) }
     }
 
@@ -202,11 +219,11 @@ class MainActivity : AppCompatActivity() {
             var finalText = localText
             if(key.isNotEmpty()){
                 status.text="AI 上下文校正中..."
-                liveText.text = "Google AI 按上下文纠错中..."
+                liveText.text = "Google AI 按上下文纠错中... ${localText.take(30)}"
                 finalText = transcribeWithGemini(file, key, localText)
             }
             if(finalText.isBlank()){
-                finalText = localText.ifBlank { "（本地识别为空，原声已保留，${size}KB）" }
+                finalText = localText.ifBlank { "（本地识别为空，原声已保留，${size}KB，请检查是否联网+已设Gemini Key自动转文字）" }
             }
             val cap = Capsule(System.currentTimeMillis().toString(), finalText, file.absolutePath, true, laNow(), size)
             capsules.add(0, cap); adapter.notifyItemInserted(0); updateTop(topInfo)
@@ -222,7 +239,7 @@ class MainActivity : AppCompatActivity() {
                 put("contents", org.json.JSONArray().put(JSONObject().apply{
                     put("parts", org.json.JSONArray().apply{
                         put(JSONObject().apply{ put("inline_data", JSONObject().apply{ put("mime_type","audio/mp4"); put("data", b64) }) })
-                        put(JSONObject().apply{ put("text","本地初步识别为：${hint.take(200)}。请结合音频，把这段中文语音转成最终文字，要求：1. 根据上下文纠正同音字 2. 保留口语 3. 只返回最终文字。") })
+                        put(JSONObject().apply{ put("text","本地初步识别为：${hint.take(200)}。请结合音频，把这段中文语音转成最终文字，要求：1. 根据上下文纠正同音字 2. 保留口语 3. 只返回最终文字。如果音频为空或听不清，就把hint直接返回。") })
                     })
                 }))
             }
