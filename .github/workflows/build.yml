@@ -10,6 +10,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - uses: android-actions/setup-android@v3
+
       - name: Auto Fix Folder Name
         run: |
           python3 << 'PY'
@@ -20,10 +21,12 @@ jobs:
               shutil.move(d,'app')
               break
           PY
+
       - name: Patch gradle.properties
         run: |
           echo "android.useAndroidX=true" >> gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
+
       - name: Patch build.gradle
         run: |
           python3 << 'PY'
@@ -39,26 +42,45 @@ jobs:
             s=s.replace('dependencies {', "dependencies {\n implementation 'com.google.android.material:material:1.11.0'\n")
           open(p,'w',encoding='utf-8').write(s)
           PY
-      - name: Patch Manifest and Themes
+
+      - name: Patch Manifest - 关键修复
         run: |
           python3 << 'PY'
-          import glob
+          import glob, re
+          # 修 Manifest - 直接换成系统自带主题，100%兼容
           for f in glob.glob('app/src/main/AndroidManifest.xml'):
             s=open(f,encoding='utf-8',errors='ignore').read()
+            print("修复前第20行附近:", s[500:800])
+            # 把所有 Material 主题都换成最安全的系统主题
+            s=re.sub(r'android:theme="@[^"]*Material[^"]*"', 'android:theme="@android:style/Theme.Light.NoTitleBar"', s)
+            s=re.sub(r'android:theme="@Theme\.[^"]*"', 'android:theme="@android:style/Theme.Light.NoTitleBar"', s)
+            s=re.sub(r'@Theme\.', '@style/Theme.', s)
             s=s.replace('Theme.Material3','Theme.MaterialComponents')
             open(f,'w',encoding='utf-8').write(s)
-          for f in glob.glob('app/src/main/res/values*/themes.xml') + glob.glob('app/src/main/res/values*/styles.xml'):
-            s=open(f,encoding='utf-8',errors='ignore').read()
-            s=s.replace('Theme.Material3','Theme.MaterialComponents')
-            open(f,'w',encoding='utf-8').write(s)
+            print("修复后:", open(f).read()[500:800])
+          # 修 values 里的 themes.xml / styles.xml
+          for f in glob.glob('app/src/main/res/**/*.xml', recursive=True):
+            try:
+              s=open(f,encoding='utf-8',errors='ignore').read()
+              if 'Material3' in s or '@Theme.' in s:
+                s=s.replace('@Theme.', '@style/Theme.')
+                s=s.replace('Theme.Material3','Theme.MaterialComponents')
+                s=s.replace('@style/@style/','@style/')
+                open(f,'w',encoding='utf-8').write(s)
+            except: pass
           PY
+
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
         with:
           gradle-version: 8.5
           arguments: assembleDebug --stacktrace
+
       - name: Find APK
-        run: find. -name "*.apk" -type f
+        run: |
+          find. -name "*.apk" -type f
+          ls -lh app/build/outputs/apk/debug/ || true
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
