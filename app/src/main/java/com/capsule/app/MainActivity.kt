@@ -1,4 +1,3 @@
-
 package com.capsule.app
 
 import android.Manifest
@@ -9,6 +8,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -55,14 +55,11 @@ class MainActivity : AppCompatActivity() {
         checkPerm()
         updateTop(topInfo)
         maybeShowKeyDialog(first = true)
-
         btnGear.setOnClickListener { showKeyDialog() }
-
         val startStop = {
             if(isRec) stopAll(status, liveText, topInfo) else startAll(status, liveText, topInfo)
         }
         recCard.setOnClickListener { startStop() }
-
         findViewById<Button>(R.id.btnExportAll).setOnClickListener { exportAll() }
         findViewById<Button>(R.id.btnDelAllAud).setOnClickListener {
             if(capsules.any { it.hasAudio }){
@@ -86,7 +83,6 @@ class MainActivity : AppCompatActivity() {
     }
     private fun getKey():String = getSharedPreferences("caps", MODE_PRIVATE).getString("gemini_key","") ?: ""
     private fun maskedKey(k:String):String = if(k.length<=4) "••••" else "••••${k.takeLast(4)}"
-
     private fun maybeShowKeyDialog(first:Boolean){
         if(first && getKey().isNotEmpty()) return
         if(first && getKey().isEmpty()) showKeyDialog()
@@ -113,50 +109,72 @@ class MainActivity : AppCompatActivity() {
         topInfo.text = "v27 • $recInfo • 已存${capsules.size}条 • $km"
     }
 
-    // 开始：原生单声道录 + SpeechRecognizer 边识别边显示
     private fun startAll(status:TextView, liveText:TextView, topInfo:TextView){
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){ checkPerm(); return }
+        if(!SpeechRecognizer.isRecognitionAvailable(this)){
+            Toast.makeText(this,"本机不支持语音识别，请装 Google App",Toast.LENGTH_LONG).show()
+            return
+        }
         try{
+            interimFinal=""
+            liveText.text=""
+            status.text="启动识别..."
+            // 关键修复1：用 applicationContext 创建，避免 attributionTag 错误
+            speechRec=SpeechRecognizer.createSpeechRecognizer(applicationContext).apply {
+                setRecognitionListener(object: RecognitionListener{
+                    override fun onReadyForSpeech(p:Bundle?){ status.text="听着呢..."; Log.d("capsule","onReady") }
+                    override fun onBeginningOfSpeech(){}
+                    override fun onRmsChanged(v:Float){}
+                    override fun onBufferReceived(b:ByteArray?){}
+                    override fun onEndOfSpeech(){ Log.d("capsule","onEndOfSpeech") }
+                    override fun onError(e:Int){
+                        Log.e("capsule","onError:$e")
+                        // 关键修复2：如果是抢麦错误 5=CLIENT 9=INSUFFICIENT_PERMISSIONS 就不要死循环重启
+                        if(isRec && e!=SpeechRecognizer.ERROR_CLIENT && e!=SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS){
+                            restartSpeech(liveText, topInfo)
+                        } else {
+                            status.text="识别暂停(录音中)"
+                        }
+                    }
+                    override fun onResults(r:Bundle?){
+                        val list = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        Log.d("capsule","onResults:${list?.firstOrNull()}")
+                        if(!list.isNullOrEmpty()){ interimFinal += list[0]; liveText.text = interimFinal; updateTop(topInfo) }
+                        if(isRec) restartSpeech(liveText, topInfo)
+                    }
+                    override fun onPartialResults(p:Bundle?){
+                        val list = p?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        if(!list.isNullOrEmpty()){ liveText.text = interimFinal + list[0]; updateTop(topInfo) }
+                    }
+                    override fun onEvent(t:Int,b:Bundle?){}
+                })
+                val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
+                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                }
+                startListening(intent)
+            }
+
+            // 关键修复3：延迟200ms再启动录音，避免同时抢MIC
             val dir=File(getExternalFilesDir(null), "capsules"); if(!dir.exists()) dir.mkdirs()
             audioFile=File(dir, "cap_${System.currentTimeMillis()}.m4a")
-            recorder=MediaRecorder().apply {
+            // 使用 applicationContext 的 MediaRecorder 兼容写法
+            recorder = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(applicationContext) else MediaRecorder()
+            recorder?.apply {
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
                 setAudioChannels(1); setAudioSamplingRate(16000); setAudioEncodingBitRate(32000)
                 setOutputFile(audioFile!!.absolutePath); prepare(); start()
             }
-            // 边录边显 用 SpeechRecognizer
-            interimFinal=""
-            speechRec=SpeechRecognizer.createSpeechRecognizer(this).apply {
-                setRecognitionListener(object: RecognitionListener{
-                    override fun onReadyForSpeech(p:Bundle?){ status.text="听着呢..." }
-                    override fun onBeginningOfSpeech(){}
-                    override fun onRmsChanged(v:Float){}
-                    override fun onBufferReceived(b:ByteArray?){}
-                    override fun onEndOfSpeech(){}
-                    override fun onError(e:Int){ if(isRec){ restartSpeech(liveText, topInfo) } }
-                    override fun onResults(r:Bundle?){
-                        val list = r?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION); if(!list.isNullOrEmpty()){ interimFinal += list[0]; liveText.text = interimFinal; updateTop(topInfo) }
-                        if(isRec) restartSpeech(liveText, topInfo)
-                    }
-                    override fun onPartialResults(p:Bundle?){
-                        val list = p?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION); if(!list.isNullOrEmpty()){ liveText.text = interimFinal + list[0]; updateTop(topInfo) }
-                    }
-                    override fun onEvent(t:Int,b:Bundle?){}
-                })
-                val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN")
-                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                }
-                startListening(intent)
-            }
-            isRec=true; currentSizeKB=0; status.text="录写中...再点结束"; liveText.text=""; 
-            // 定时更新大小
+
+            isRec=true; currentSizeKB=0; status.text="录写中...再点结束"
             scope.launch { while(isRec){ audioFile?.let { currentSizeKB = (it.length()/1024).toInt() }; updateTop(topInfo); delay(500) } }
-        }catch(e:Exception){ Toast.makeText(this,"开始失败 ${e.message}",Toast.LENGTH_SHORT).show() }
+        }catch(e:Exception){ Log.e("capsule","startAll failed",e); Toast.makeText(this,"开始失败 ${e.message}",Toast.LENGTH_SHORT).show() }
     }
+
     private fun restartSpeech(liveText:TextView, topInfo:TextView){
         if(!isRec) return
         try{
@@ -164,15 +182,16 @@ class MainActivity : AppCompatActivity() {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, "zh-CN"); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             }
             speechRec?.startListening(intent)
-        }catch(_:Exception){}
+        }catch(e:Exception){ Log.e("capsule","restart failed",e) }
     }
+
     private fun stopAll(status:TextView, liveText:TextView, topInfo:TextView){
         isRec=false
         try{ speechRec?.stopListening(); speechRec?.destroy() }catch(_:Exception){}
         speechRec=null
         try{ recorder?.stop(); recorder?.release() }catch(_:Exception){}
         recorder=null
-        status.text="AI 上下文校正中..."
+        status.text="处理中..."
         val file = audioFile
         val localText = interimFinal.ifBlank { liveText.text.toString() }
         if(file==null || !file.exists()){
@@ -183,15 +202,21 @@ class MainActivity : AppCompatActivity() {
             val key = getKey()
             var finalText = localText
             if(key.isNotEmpty()){
+                status.text="AI 上下文校正中..."
                 liveText.text = "Google AI 按上下文纠错中..."
                 finalText = transcribeWithGemini(file, key, localText)
+                Log.d("capsule","finalText from Gemini: $finalText")
             }
-            val cap = Capsule(System.currentTimeMillis().toString(), finalText.ifBlank { "（无文字，原声已保留）" }, file.absolutePath, true, laNow(), size)
+            if(finalText.isBlank()){
+                finalText = localText.ifBlank { "（本地识别为空，原声已保留，${size}KB）" }
+            }
+            val cap = Capsule(System.currentTimeMillis().toString(), finalText, file.absolutePath, true, laNow(), size)
             capsules.add(0, cap); adapter.notifyItemInserted(0); updateTop(topInfo)
-            status.text="已保存，点一下开始"; liveText.text="就绪，点一下开始录写"
+            status.text="已保存，点一下开始"; liveText.text="就绪"
             interimFinal=""; currentSizeKB=0
         }
     }
+
     private suspend fun transcribeWithGemini(audioFile:File, apiKey:String, hint:String):String = withContext(Dispatchers.IO){
         try{
             val b64 = android.util.Base64.encodeToString(audioFile.readBytes(), android.util.Base64.NO_WRAP)
@@ -210,7 +235,7 @@ class MainActivity : AppCompatActivity() {
             val obj = JSONObject(body)
             val txt = obj.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text") ?: ""
             if(txt.isNotBlank()) txt.trim() else hint
-        }catch(e:Exception){ hint.ifBlank { "（AI 校正失败，原声已保留） ${e.message}" } }
+        }catch(e:Exception){ Log.e("capsule","gemini failed",e); hint.ifBlank { "（AI 校正失败，原声已保留） ${e.message}" } }
     }
     private fun exportAll(){
         if(capsules.isEmpty()){ Toast.makeText(this,"没有记录",Toast.LENGTH_SHORT).show(); return }
@@ -231,7 +256,6 @@ class MainActivity : AppCompatActivity() {
             val c=items[pos]
             h.meta.text="${c.laTime} • ${c.sizeKB}KB • ${c.text.length}字 • ${if(c.hasAudio) "有音频" else "已释放"}"
             h.txt.text=c.text
-            // 文字直接可编辑
             h.txt.setOnClickListener{
                 val et=EditText(h.itemView.context); et.setText(c.text)
                 AlertDialog.Builder(h.itemView.context).setTitle("编辑文字").setView(et)
