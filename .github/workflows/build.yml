@@ -43,30 +43,21 @@ jobs:
           open(p,'w',encoding='utf-8').write(s)
           PY
 
-      - name: Patch Manifest and Themes - 修复@style/，不降级
+      - name: Patch Manifest and Themes - 修复@style/, 不降级
         run: |
           python3 << 'PY'
           import glob, re
-          # 1. 修 AndroidManifest.xml - 保留 Material3，只补上 @style/
           for f in glob.glob('app/src/main/AndroidManifest.xml'):
             s=open(f,encoding='utf-8',errors='ignore').read()
             s=s.replace('@Theme.Material3', '@style/Theme.Material3')
-            s=s.replace('@Theme.MaterialComponents', '@style/Theme.MaterialComponents')
             s=re.sub(r'"@Theme\.', '"@style/Theme.', s)
-            s=re.sub(r"'@Theme\.", "'@style/Theme.", s)
             s=s.replace('@style/@style/', '@style/')
             open(f,'w',encoding='utf-8').write(s)
-            print("Manifest 已修复，保留 Material3")
-
-          # 2. 修 themes.xml / styles.xml - 同样保留 Material3，只修格式
           for f in glob.glob('app/src/main/res/**/themes.xml', recursive=True) + glob.glob('app/src/main/res/**/styles.xml', recursive=True):
             s=open(f,encoding='utf-8',errors='ignore').read()
-            orig=s
             s=s.replace('@Theme.', '@style/Theme.')
             s=s.replace('@style/@style/', '@style/')
-            if s!=orig:
-              open(f,'w',encoding='utf-8').write(s)
-              print(f"已修复 {f}")
+            open(f,'w',encoding='utf-8').write(s)
           PY
 
       - name: Build Debug APK
