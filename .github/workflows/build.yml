@@ -67,9 +67,7 @@ jobs:
           arguments: assembleDebug --stacktrace
 
       - name: Find APK
-        run: |
-          find. -name "*.apk" -type f
-          ls -lh app/build/outputs/apk/debug/ || true
+        run: find. -name "*.apk" -type f
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
