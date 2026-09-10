@@ -5,11 +5,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-      - uses: android-actions/setup-android@v3
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
       - name: Auto Fix Folder Name
         run: |
           python3 << 'PY'
@@ -30,15 +32,15 @@ jobs:
             open(p,'w',encoding='utf-8').write(s)
           PY
       - name: Build Debug APK
-        run: gradle assembleDebug --stacktrace
-      - name: Find APK
-        run: |
-          find. -name "*.apk" -type f
-          ls -R | grep -i apk
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 8.5
+          arguments: assembleDebug --stacktrace
+      - name: Find APK where is it
+        run: find. -name "*.apk" -type f
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: capsule-app-apk
           path: |
             **/*.apk
-            app/build/outputs/**/*.apk
