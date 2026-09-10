@@ -12,10 +12,12 @@ jobs:
           distribution: 'temurin'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-      - name: Fix folder name
+      - name: Fix
         run: |
           ls -la
-          if [ -d "应用程序" ]; then mv "应用程序" app; fi
+          mv app app_backup || true
+          mv */app app || true
+          ls -la
           ls -la app
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
