@@ -10,7 +10,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       - uses: android-actions/setup-android@v3
-
       - name: Auto Fix Folder Name
         run: |
           python3 << 'PY'
@@ -21,12 +20,10 @@ jobs:
               shutil.move(d,'app')
               break
           PY
-
       - name: Patch gradle.properties
         run: |
           echo "android.useAndroidX=true" >> gradle.properties
           echo "android.enableJetifier=true" >> gradle.properties
-
       - name: Patch build.gradle
         run: |
           python3 << 'PY'
@@ -35,43 +32,33 @@ jobs:
           s=open(p,encoding='utf-8',errors='ignore').read()
           if 'namespace' not in s:
             s=s.replace('android {', "android {\n namespace 'com.example.capsule'\n")
-          # 强制升到 34
           s=re.sub(r'compileSdk\s+\d+', 'compileSdk 34', s)
           s=re.sub(r'compileSdkVersion\s+\d+', 'compileSdkVersion 34', s)
           s=re.sub(r'targetSdk\s+\d+', 'targetSdk 34', s)
           if 'com.google.android.material' not in s:
             s=s.replace('dependencies {', "dependencies {\n implementation 'com.google.android.material:material:1.11.0'\n")
           open(p,'w',encoding='utf-8').write(s)
-          print(s[:3000])
           PY
-
-      - name: Patch Manifest and Themes - 修主题
+      - name: Patch Manifest and Themes
         run: |
           python3 << 'PY'
           import glob
           for f in glob.glob('app/src/main/AndroidManifest.xml'):
             s=open(f,encoding='utf-8',errors='ignore').read()
-            s=s.replace('@Theme.Material3.DayNight.NoActionBar','@style/Theme.MaterialComponents.DayNight.NoActionBar')
-            s=s.replace('@style/Theme.Material3.DayNight.NoActionBar','@style/Theme.MaterialComponents.DayNight.NoActionBar')
             s=s.replace('Theme.Material3','Theme.MaterialComponents')
             open(f,'w',encoding='utf-8').write(s)
-            print("Patched Manifest")
           for f in glob.glob('app/src/main/res/values*/themes.xml') + glob.glob('app/src/main/res/values*/styles.xml'):
             s=open(f,encoding='utf-8',errors='ignore').read()
             s=s.replace('Theme.Material3','Theme.MaterialComponents')
             open(f,'w',encoding='utf-8').write(s)
-            print(f"Patched {f}")
           PY
-
       - name: Build Debug APK
         uses: gradle/gradle-build-action@v2
         with:
           gradle-version: 8.5
           arguments: assembleDebug --stacktrace
-
       - name: Find APK
         run: find. -name "*.apk" -type f
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
