@@ -43,7 +43,7 @@ jobs:
           open(p,'w',encoding='utf-8').write(s)
           PY
 
-      - name: Patch Manifest and Themes - 修复@style/, 不降级
+      - name: Patch Manifest and Themes
         run: |
           python3 << 'PY'
           import glob, re
@@ -67,7 +67,9 @@ jobs:
           arguments: assembleDebug --stacktrace
 
       - name: Find APK
-        run: find. -name "*.apk" -type f
+        run: |
+          find. -name "*.apk" -type f
+          ls -lh app/build/outputs/apk/debug/ || true
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
