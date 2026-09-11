@@ -1,147 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 闪念胶囊 v41 美观版 - 列表卡片 item_capsule.xml
-     特点：白底细描边，16号正文，按钮全露不挡字，可横向滑动，备注隐藏 -->
-<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!-- 闪念胶囊 v41 - item_capsule.xml 纯净编译版
+     修复：去掉所有 @drawable 引用，全部用纯色，保证 build 过
+     功能保留：16号字 + 按钮横向滑动全露 + 备注隐藏 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="8dp"
-    android:layout_marginVertical="6dp"
-    app:cardCornerRadius="18dp"
-    app:cardBackgroundColor="#FFFFFF"
-    app:strokeWidth="1dp"
-    app:strokeColor="#E0E0E0"
-    app:cardElevation="2dp">
+    android:orientation="vertical"
+    android:background="#FFFFFF"
+    android:layout_marginLeft="12dp"
+    android:layout_marginRight="12dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="8dp"
+    android:padding="16dp">
+
+    <!-- 时间 - 洛杉矶 -->
+    <TextView
+        android:id="@+id/tvTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🕒 洛杉矶 2026/05/13 14:23"
+        android:textSize="11sp"
+        android:textColor="#9E9E9E" />
+
+    <!-- 正文 16sp 点一下可改 -->
+    <TextView
+        android:id="@+id/tvContent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="这里是你的闪念内容，点一下就能改，16号字"
+        android:textSize="16sp"
+        android:textColor="#212121"
+        android:lineSpacingExtra="4dp" />
+
+    <!-- 录音区 -->
+    <LinearLayout
+        android:id="@+id/layoutAudio"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="10dp">
+
+        <TextView
+            android:id="@+id/btnPlay"
+            android:layout_width="wrap_content"
+            android:layout_height="28dp"
+            android:background="#EEEEEE"
+            android:text="  ▶ 播放  "
+            android:textSize="12sp"
+            android:gravity="center"
+            android:textColor="#212121" />
+
+        <TextView
+            android:id="@+id/tvDuration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="8dp"
+            android:text="00:12"
+            android:textSize="11sp"
+            android:textColor="#757575" />
+    </LinearLayout>
+
+    <!-- 关键修复：按钮区横向滑动，不挡字 -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/btnDeleteAudio"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_marginRight="8dp"
+                android:background="#FFF3E0"
+                android:text="  删音频  "
+                android:textSize="12sp"
+                android:gravity="center"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:textColor="#5D4037" />
+
+            <TextView
+                android:id="@+id/btnExport"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_marginRight="8dp"
+                android:background="#E8F5E9"
+                android:text="  导出  "
+                android:textSize="12sp"
+                android:gravity="center"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:textColor="#2E7D32" />
+
+            <TextView
+                android:id="@+id/btnDelete"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="#FFEBEE"
+                android:text="  删除  "
+                android:textSize="12sp"
+                android:gravity="center"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:textColor="#C62828" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- 备注 - 浅灰隐藏 -->
+    <TextView
+        android:id="@+id/btnAddNote"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right"
+        android:layout_marginTop="8dp"
+        android:text="+ 备注"
+        android:textSize="11sp"
+        android:textColor="#BDBDBD" />
 
     <LinearLayout
+        android:id="@+id/layoutNote"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="16dp">
+        android:visibility="gone"
+        android:layout_marginTop="8dp"
+        android:background="#FAFAFA"
+        android:padding="8dp">
 
-        <!-- 时间 -->
-        <TextView
-            android:id="@+id/tvTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🕒 洛杉矶 2026/05/13 14:23"
-            android:textSize="11sp"
-            android:textColor="#9E9E9E" />
-
-        <!-- 正文 16号，可点编辑 -->
-        <TextView
-            android:id="@+id/tvContent"
+        <EditText
+            android:id="@+id/etNote"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="这里是你的闪念内容，点一下就能改"
-            android:textSize="16sp"
-            android:textColor="#212121"
-            android:lineSpacingExtra="4dp" />
-
-        <!-- 录音波形 + 播放 -->
-        <LinearLayout
-            android:id="@+id/layoutAudio"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="10dp">
-
-            <TextView
-                android:id="@+id/btnPlay"
-                android:layout_width="wrap_content"
-                android:layout_height="28dp"
-                android:background="#F5F5F5"
-                android:text="▶ 播放"
-                android:textSize="12sp"
-                android:gravity="center"
-                android:paddingHorizontal="10dp" />
-
-            <TextView
-                android:id="@+id/tvDuration"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="00:12"
-                android:textSize="11sp"
-                android:textColor="#757575" />
-        </LinearLayout>
-
-        <!-- 按钮区 - 横向可滑动，不挡字 -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:scrollbars="none">
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/btnDeleteAudio"
-                    android:layout_width="wrap_content"
-                    android:layout_height="28dp"
-                    android:layout_marginEnd="8dp"
-                    android:background="#FFF3E0"
-                    android:text="删音频"
-                    android:textSize="12sp"
-                    android:gravity="center"
-                    android:paddingHorizontal="12dp" />
-
-                <TextView
-                    android:id="@+id/btnExport"
-                    android:layout_width="wrap_content"
-                    android:layout_height="28dp"
-                    android:layout_marginEnd="8dp"
-                    android:background="#E8F5E9"
-                    android:text="导出"
-                    android:textSize="12sp"
-                    android:gravity="center"
-                    android:paddingHorizontal="12dp" />
-
-                <TextView
-                    android:id="@+id/btnDelete"
-                    android:layout_width="wrap_content"
-                    android:layout_height="28dp"
-                    android:background="#FFEBEE"
-                    android:text="删除"
-                    android:textSize="12sp"
-                    android:gravity="center"
-                    android:paddingHorizontal="12dp" />
-            </LinearLayout>
-        </HorizontalScrollView>
-
-        <!-- 备注 - 平时隐藏，浅灰 -->
-        <TextView
-            android:id="@+id/btnAddNote"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:layout_marginTop="8dp"
-            android:text="+ 备注"
-            android:textSize="11sp"
-            android:textColor="#BDBDBD" />
-
-        <LinearLayout
-            android:id="@+id/layoutNote"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone"
-            android:layout_marginTop="8dp"
-            android:background="#FAFAFA"
-            android:padding="8dp">
-
-            <EditText
-                android:id="@+id/etNote"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:hint="添加备注..."
-                android:textSize="13sp"
-                android:background="@null" />
-        </LinearLayout>
+            android:hint="添加备注..."
+            android:textSize="13sp"
+            android:background="@android:color/transparent" />
     </LinearLayout>
-</androidx.cardview.widget.CardView>
+
+</LinearLayout>
