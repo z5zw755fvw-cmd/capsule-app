@@ -1,165 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#FFFEF6"
+    android:background="#FFF9C4"
     android:padding="16dp">
 
-    <!-- 顶部标题，极简 -->
+    <!-- 顶部大黄卡 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:background="#FFFFFF"
+        android:orientation="vertical"
+        android:padding="20dp">
 
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_weight="1"
+        <TextView
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="闪念胶囊"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="#1A1A1A"
-                android:letterSpacing="0.02" />
-            <TextView
-                android:id="@+id/topInfo"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:text="v41 · 美观版 · 就绪"
-                android:textSize="11sp"
-                android:textColor="#9A9A9A" />
-        </LinearLayout>
+            android:text="就绪 · Gemini 3.6"
+            android:textSize="12sp"
+            android:textColor="#616161" />
 
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            app:cardCornerRadius="20dp"
-            app:cardBackgroundColor="#F5F5F0"
-            app:strokeWidth="0dp">
-            <TextView
-                android:id="@+id/btnGear"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:text="⚙️"
-                android:gravity="center"
-                android:textSize="18sp" />
-        </com.google.android.material.card.MaterialCardView>
-    </LinearLayout>
-
-    <!-- 主录制卡片，美观核心 -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/recCard"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
-        app:cardCornerRadius="24dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1.5dp"
-        app:strokeColor="#1A1A1A"
-        app:cardBackgroundColor="#FFF59D">
-
-        <LinearLayout
+        <TextView
+            android:id="@+id/tvMainHint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:gravity="center">
+            android:layout_marginTop="12dp"
+            android:text="点一下这里开始记"
+            android:textSize="20sp"
+            android:textColor="#212121"
+            android:lineSpacingExtra="4dp" />
 
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="56dp"
-                android:layout_height="56dp"
-                app:cardCornerRadius="28dp"
-                app:cardBackgroundColor="#1A1A1A"
-                app:cardElevation="0dp">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:text="●"
-                    android:gravity="center"
-                    android:textColor="#FFF59D"
-                    android:textSize="22sp" />
-            </com.google.android.material.card.MaterialCardView>
+        <TextView
+            android:id="@+id/btnDownload"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginTop="16dp"
+            android:background="#EEEEEE"
+            android:gravity="center"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="导出 22号大字"
+            android:textSize="13sp" />
 
-            <TextView
-                android:id="@+id/liveText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="点一下开始，双录"
-                android:textSize="18sp"
-                android:textColor="#1A1A1A"
-                android:gravity="center"
-                android:lineSpacingExtra="4dp"
-                android:minHeight="28dp" />
-
-            <TextView
-                android:id="@+id/status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:background="#1A1A1A"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="4dp"
-                android:text="就绪 · Gemini 3.6"
-                android:textSize="11sp"
-                android:textColor="#FFF59D" />
-
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </LinearLayout>
 
     <!-- 列表 -->
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/list"
+        android:id="@+id/rvCapsules"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="16dp"
-        android:clipToPadding="false"
-        android:paddingBottom="8dp" />
+        android:layout_height="match_parent"
+        android:layout_marginTop="12dp" />
 
-    <!-- 底部操作，胶囊按钮 -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="12dp"
-        android:gravity="center">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnExportAll"
-            style="@style/Widget.Material3.Button.TonalButton"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="44dp"
-            android:text="导出全部"
-            android:textSize="13sp"
-            app:cornerRadius="22dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnDelAllAud"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_weight="1"
-            android:layout_height="44dp"
-            android:layout_marginStart="10dp"
-            android:text="清理音频"
-            android:textSize="13sp"
-            app:cornerRadius="22dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnClear"
-            style="@style/Widget.Material3.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:layout_marginStart="10dp"
-            android:text="清空"
-            android:textSize="13sp"
-            app:cornerRadius="22dp" />
-    </LinearLayout>
 </LinearLayout>
