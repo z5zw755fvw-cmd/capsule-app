@@ -1,33 +1,165 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFEF6"
+    android:padding="16dp">
 
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical" android:layout_width="match_parent" android:layout_height="match_parent"
-    android:background="#fdfcf7" android:padding="10dp">
-    <!-- 顶部小字条 -->
-    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content"
+    <!-- 顶部标题，极简 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
         android:gravity="center_vertical">
-        <TextView android:id="@+id/topInfo" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
-            android:text="v27 • 0KB • 0字 • 已存0条" android:textSize="11sp" android:textStyle="bold" android:alpha="0.7"/>
-        <TextView android:id="@+id/btnGear" android:layout_width="32dp" android:layout_height="32dp"
-            android:text="⚙️" android:gravity="center" android:textSize="18sp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="闪念胶囊"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#1A1A1A"
+                android:letterSpacing="0.02" />
+            <TextView
+                android:id="@+id/topInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="v41 · 美观版 · 就绪"
+                android:textSize="11sp"
+                android:textColor="#9A9A9A" />
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardCornerRadius="20dp"
+            app:cardBackgroundColor="#F5F5F0"
+            app:strokeWidth="0dp">
+            <TextView
+                android:id="@+id/btnGear"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:text="⚙️"
+                android:gravity="center"
+                android:textSize="18sp" />
+        </com.google.android.material.card.MaterialCardView>
     </LinearLayout>
-    <!-- 中间录写区 边识别边显示 -->
-    <com.google.android.material.card.MaterialCardView android:id="@+id/recCard"
-        android:layout_width="match_parent" android:layout_height="190dp" android:layout_marginTop="6dp"
-        app:cardCornerRadius="26dp" app:strokeWidth="2.5dp" app:strokeColor="#111" app:cardBackgroundColor="#FFFDA2">
-        <LinearLayout android:orientation="vertical" android:gravity="center" android:layout_width="match_parent" android:layout_height="match_parent" android:padding="12dp">
-            <TextView android:text="点" android:textSize="62sp" android:textStyle="bold" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/status" android:text="点一下开始录写" android:textSize="11sp" android:textStyle="bold" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-            <TextView android:id="@+id/liveText" android:text="边说边在这儿出字..." android:textSize="15sp" android:gravity="center"
-                android:maxLines="3" android:ellipsize="end" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp"/>
+
+    <!-- 主录制卡片，美观核心 -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/recCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1.5dp"
+        app:strokeColor="#1A1A1A"
+        app:cardBackgroundColor="#FFF59D">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp"
+            android:gravity="center">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                app:cardCornerRadius="28dp"
+                app:cardBackgroundColor="#1A1A1A"
+                app:cardElevation="0dp">
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:text="●"
+                    android:gravity="center"
+                    android:textColor="#FFF59D"
+                    android:textSize="22sp" />
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:id="@+id/liveText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="点一下开始，双录"
+                android:textSize="18sp"
+                android:textColor="#1A1A1A"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
+                android:minHeight="28dp" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="#1A1A1A"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp"
+                android:text="就绪 · Gemini 3.6"
+                android:textSize="11sp"
+                android:textColor="#FFF59D" />
+
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:layout_marginTop="10dp"/>
+    <!-- 列表 -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
 
-    <!-- 底部按钮 像应用 -->
-    <LinearLayout android:orientation="horizontal" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp">
-        <Button android:id="@+id/btnExportAll" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="导出全部TXT" android:textSize="11sp"/>
-        <Button android:id="@+id/btnDelAllAud" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="一键删全部音频" android:textSize="11sp" android:layout_marginLeft="6dp"/>
-        <Button android:id="@+id/btnClear" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="全部清空" android:textSize="11sp" android:layout_marginLeft="6dp"/>
+    <!-- 底部操作，胶囊按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        android:gravity="center">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportAll"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="44dp"
+            android:text="导出全部"
+            android:textSize="13sp"
+            app:cornerRadius="22dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnDelAllAud"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="44dp"
+            android:layout_marginStart="10dp"
+            android:text="清理音频"
+            android:textSize="13sp"
+            app:cornerRadius="22dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnClear"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginStart="10dp"
+            android:text="清空"
+            android:textSize="13sp"
+            app:cornerRadius="22dp" />
     </LinearLayout>
 </LinearLayout>
