@@ -1,38 +1,35 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="#FFF9C4"
-    android:padding="24dp">
+name: 构建 APK
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="就绪 · 纯编译版"
-        android:textSize="12sp"
-        android:textColor="#9E9E9E" />
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
-    <TextView
-        android:id="@+id/tvMainHint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="点一下这里开始记"
-        android:textSize="22sp"
-        android:textColor="#212121" />
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    <TextView
-        android:id="@+id/btnDownload"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_marginTop="24dp"
-        android:background="#FFFFFF"
-        android:gravity="center"
-        android:paddingLeft="20dp"
-        android:paddingRight="20dp"
-        android:text="导出 22号大字"
-        android:textSize="14sp"
-        android:textColor="#212121" />
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-</LinearLayout>
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: capsule-debug-apk
+          path: app/build/outputs/apk/debug/*.apk
