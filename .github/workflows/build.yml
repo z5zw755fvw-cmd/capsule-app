@@ -1,78 +1,38 @@
-name: Build APK
-on: [push]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-      - uses: android-actions/setup-android@v3
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFF9C4"
+    android:padding="24dp">
 
-      - name: Auto Fix Folder Name
-        run: |
-          python3 << 'PY'
-          import os, shutil
-          for d in os.listdir('.'):
-            if os.path.isdir(d) and d!='app' and os.path.exists(os.path.join(d,'src')):
-              if os.path.exists('app'): shutil.rmtree('app')
-              shutil.move(d,'app')
-              break
-          PY
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="就绪 · 纯编译版"
+        android:textSize="12sp"
+        android:textColor="#9E9E9E" />
 
-      - name: Patch gradle.properties
-        run: |
-          echo "android.useAndroidX=true" >> gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
+    <TextView
+        android:id="@+id/tvMainHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:text="点一下这里开始记"
+        android:textSize="22sp"
+        android:textColor="#212121" />
 
-      - name: Patch build.gradle - 保持Material3
-        run: |
-          python3 << 'PY'
-          import re
-          p='app/build.gradle'
-          s=open(p,encoding='utf-8',errors='ignore').read()
-          if 'namespace' not in s:
-            s=s.replace('android {', "android {\n namespace 'com.example.capsule'\n")
-          s=re.sub(r'compileSdk\s+\d+', 'compileSdk 34', s)
-          s=re.sub(r'compileSdkVersion\s+\d+', 'compileSdkVersion 34', s)
-          s=re.sub(r'targetSdk\s+\d+', 'targetSdk 34', s)
-          if 'com.google.android.material' not in s:
-            s=s.replace('dependencies {', "dependencies {\n implementation 'com.google.android.material:material:1.11.0'\n")
-          open(p,'w',encoding='utf-8').write(s)
-          PY
+    <TextView
+        android:id="@+id/btnDownload"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginTop="24dp"
+        android:background="#FFFFFF"
+        android:gravity="center"
+        android:paddingLeft="20dp"
+        android:paddingRight="20dp"
+        android:text="导出 22号大字"
+        android:textSize="14sp"
+        android:textColor="#212121" />
 
-      - name: Patch Manifest and Themes
-        run: |
-          python3 << 'PY'
-          import glob, re
-          for f in glob.glob('app/src/main/AndroidManifest.xml'):
-            s=open(f,encoding='utf-8',errors='ignore').read()
-            s=s.replace('@Theme.Material3', '@style/Theme.Material3')
-            s=re.sub(r'"@Theme\.', '"@style/Theme.', s)
-            s=s.replace('@style/@style/', '@style/')
-            open(f,'w',encoding='utf-8').write(s)
-          for f in glob.glob('app/src/main/res/**/themes.xml', recursive=True) + glob.glob('app/src/main/res/**/styles.xml', recursive=True):
-            s=open(f,encoding='utf-8',errors='ignore').read()
-            s=s.replace('@Theme.', '@style/Theme.')
-            s=s.replace('@style/@style/', '@style/')
-            open(f,'w',encoding='utf-8').write(s)
-          PY
-
-      - name: Build Debug APK
-        uses: gradle/gradle-build-action@v2
-        with:
-          gradle-version: 8.5
-          arguments: assembleDebug --stacktrace
-
-      - name: Find APK
-        run: |
-          find . -name "*.apk" -type f
-          ls -lh app/build/outputs/apk/debug/ || true
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: capsule-app-apk
-          path: "**/*.apk"
+</LinearLayout>
